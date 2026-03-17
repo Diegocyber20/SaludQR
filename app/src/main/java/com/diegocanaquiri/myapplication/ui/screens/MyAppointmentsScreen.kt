@@ -38,26 +38,31 @@ fun MyAppointmentsScreen(viewModel: AppointmentsViewModel, patientId: String) {
     Scaffold(
         topBar = { 
             CenterAlignedTopAppBar(
-                title = { Text("Mis Tickets", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
+                title = { Text("Mis Citas Médicas", fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
             ) 
         },
-        containerColor = Color.Transparent
+        containerColor = Color.White
     ) { padding ->
-        MedicalBackground {
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-                when (val state = uiState) {
-                    is AppointmentsUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                    is AppointmentsUiState.Empty -> {
-                        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Aún no tienes citas agendadas.", color = Color.Gray)
+        Box(modifier = Modifier.fillMaxSize().padding(padding).background(Color(0xFFF8F9FA))) {
+            when (val state = uiState) {
+                is AppointmentsUiState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                is AppointmentsUiState.Empty -> {
+                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Surface(
+                            modifier = Modifier.size(120.dp),
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = Color.White
+                        ) {
+                            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.padding(32.dp), tint = Color.LightGray)
                         }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text("No tienes citas activas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Tus próximas citas aparecerán aquí", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                     }
-                    is AppointmentsUiState.Success -> AppointmentsList(state.appointments, viewModel)
-                    is AppointmentsUiState.Error -> Text("Error: ${state.message}", Modifier.align(Alignment.Center))
                 }
+                is AppointmentsUiState.Success -> AppointmentsList(state.appointments, viewModel)
+                is AppointmentsUiState.Error -> Text("Error: ${state.message}", Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -65,88 +70,129 @@ fun MyAppointmentsScreen(viewModel: AppointmentsViewModel, patientId: String) {
 
 @Composable
 fun AppointmentsList(appointments: List<Appointment>, viewModel: AppointmentsViewModel) {
-    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         items(appointments) { appointment ->
             var walletUrl by remember { mutableStateOf<String?>(null) }
             var showQrDialog by remember { mutableStateOf(false) }
             
             LaunchedEffect(appointment.id) {
-                viewModel.getWalletUrl(appointment.id) { url ->
-                    walletUrl = url
-                }
+                viewModel.getWalletUrl(appointment.id) { url -> walletUrl = url }
             }
 
             if (showQrDialog) {
-                val qrData = if (appointment.qrCode.isNotEmpty()) appointment.qrCode else appointment.id
-                val qrBitmap = remember(qrData) { BarcodeUtils.generateQrCode(qrData) }
-                AlertDialog(
-                    onDismissRequest = { showQrDialog = false },
-                    confirmButton = { TextButton(onClick = { showQrDialog = false }) { Text("Cerrar") } },
-                    title = { Text("Escanea este código al llegar") },
-                    text = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                            qrBitmap?.let {
-                                androidx.compose.foundation.Image(
-                                    bitmap = it.asImageBitmap(),
-                                    contentDescription = "Código QR",
-                                    modifier = Modifier.size(240.dp).background(Color.White).padding(8.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(text = "ID Ticket: $qrData", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        }
-                    },
-                    shape = RoundedCornerShape(28.dp)
-                )
+                QrCodeTicketDialog(appointment) { showQrDialog = false }
             }
 
+            // Ticket Card Design
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
-                            Text(text = "CONSULTA MÉDICA", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            Text(text = appointment.appointmentTime, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        }
-                        if (appointment.status.name == "CHECKED_IN") {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF2D6A4F))
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Header del Ticket (Azul)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
+                    ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("PASE DE INGRESO", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            StatusBadge(appointment.status.name)
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
-                    Spacer(modifier = Modifier.height(16.dp))
 
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(
-                            onClick = { showQrDialog = true },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("MOSTRAR CÓDIGO QR", fontWeight = FontWeight.Bold)
-                        }
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(text = appointment.appointmentTime, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1B1B1F))
+                        Text(text = "ID de seguimiento: ${appointment.id.take(8).uppercase()}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         
-                        AddToWalletButton(
-                            saveUrl = walletUrl,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    
-                    if (appointment.status.name == "CHECKED_IN") {
-                        Text(
-                            text = "✓ ASISTENCIA CONFIRMADA", 
-                            color = Color(0xFF2D6A4F), 
-                            modifier = Modifier.padding(top = 12.dp).align(Alignment.CenterHorizontally),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        
+                        // Botones de Acción
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = { showQrDialog = true },
+                                modifier = Modifier.weight(1.2f).height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                elevation = ButtonDefaults.buttonElevation(0.dp)
+                            ) {
+                                Text("VER QR", fontWeight = FontWeight.Bold)
+                            }
+                            
+                            AddToWalletButton(
+                                saveUrl = walletUrl,
+                                modifier = Modifier.weight(1f).height(48.dp)
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+fun StatusBadge(status: String) {
+    val isChecked = status == "CHECKED_IN"
+    Surface(
+        color = if (isChecked) Color(0xFFD8F3DC) else Color.White.copy(alpha = 0.2f),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = if (isChecked) "✓ ASISTIÓ" else "PENDIENTE",
+            color = if (isChecked) Color(0xFF2D6A4F) else Color.White,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun QrCodeTicketDialog(appointment: Appointment, onDismiss: () -> Unit) {
+    val qrData = if (appointment.qrCode.isNotEmpty()) appointment.qrCode else appointment.id
+    val qrBitmap = remember(qrData) { BarcodeUtils.generateQrCode(qrData) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { 
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { 
+                Text("CERRAR", fontWeight = FontWeight.Bold) 
+            } 
+        },
+        shape = RoundedCornerShape(28.dp),
+        containerColor = Color.White,
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text("Tu Pase Digital", fontWeight = FontWeight.ExtraBold)
+                Text("Preséntalo en recepción", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                qrBitmap?.let {
+                    Surface(
+                        modifier = Modifier.size(220.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
+                    ) {
+                        androidx.compose.foundation.Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "QR",
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(appointment.appointmentTime, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    )
 }

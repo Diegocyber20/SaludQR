@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.rememberNavController
 import com.diegocanaquiri.myapplication.ui.navigation.SaludNavGraph
-import com.diegocanaquiri.myapplication.ui.theme.SaludQRTheme
+import com.diegocanaquiri.myapplication.ui.theme.CitasMedicasAPPTheme
 import com.diegocanaquiri.myapplication.viewmodel.AppointmentsViewModel
 import com.diegocanaquiri.myapplication.viewmodel.AuthViewModel
 import com.diegocanaquiri.myapplication.viewmodel.ScannerViewModel
@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
         })[AppointmentsViewModel::class.java]
 
         setContent {
-            SaludQRTheme {
+            CitasMedicasAPPTheme {
                 val navController = rememberNavController()
                 SaludNavGraph(
                     navController = navController,

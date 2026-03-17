@@ -25,9 +25,8 @@ class AdminReportViewModel : ViewModel() {
         viewModelScope.launch {
             _reportState.value = ReportUiState.Loading
             try {
-                // Buscamos todas las citas que ya han sido escaneadas (asistencia registrada)
+                // Buscamos todas las citas para tener el total vs asistidos
                 val result = firestore.collection("appointments")
-                    .whereEqualTo("status", "CHECKED_IN")
                     .get()
                     .await()
                 

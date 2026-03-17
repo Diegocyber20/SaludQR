@@ -16,6 +16,7 @@ class FirebaseAppointmentRepository(
 
     override suspend fun bookAppointment(booking: Booking): Result<String> {
         return try {
+            val orderDocRef = firestore.collection("orders").document()
             val appointmentDocRef = firestore.collection("appointments").document()
             val serviceDocRef = firestore.collection("events").document(booking.shiftId)
 
@@ -32,19 +33,32 @@ class FirebaseAppointmentRepository(
                     throw Exception("Lo sentimos, ya no hay cupos disponibles.")
                 }
 
-                // 3. Crear la cita (Usando los campos de la guía)
+                // 3. Crear la Orden (Punto 6 - Colección orders)
+                val order = mapOf(
+                    "id" to orderDocRef.id,
+                    "userId" to booking.patientId,
+                    "eventId" to booking.shiftId,
+                    "status" to "COMPLETED",
+                    "total" to 0.0, // En este caso gratuito o placeholder
+                    "currency" to "PEN",
+                    "createdAt" to System.currentTimeMillis()
+                )
+                transaction.set(orderDocRef, order)
+
+                // 4. Crear la cita (Punto 6 - Colección tickets/appointments)
                 val appointment = mapOf(
                     "id" to appointmentDocRef.id,
+                    "orderId" to orderDocRef.id, // Referencia a la orden
                     "eventId" to booking.shiftId,
                     "patientId" to booking.patientId,
                     "appointmentTime" to booking.appointmentTime,
-                    "code" to appointmentDocRef.id, // ID único para el QR
+                    "code" to appointmentDocRef.id, 
                     "status" to "ISSUED",
                     "createdAt" to System.currentTimeMillis()
                 )
                 transaction.set(appointmentDocRef, appointment)
 
-                // 4. Incrementar el contador de cupos (Punto 7.1)
+                // 5. Incrementar el contador de cupos
                 transaction.update(serviceDocRef, "sold", sold + 1)
                 
                 appointmentDocRef.id

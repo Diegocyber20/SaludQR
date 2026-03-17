@@ -35,7 +35,7 @@ class AdminViewModel : ViewModel() {
         }
     }
 
-    fun createMedicalService(title: String, description: String, date: String, location: String, capacity: Int) {
+    fun createMedicalService(title: String, description: String, date: String, locationName: String, locationAddress: String, capacity: Int) {
         viewModelScope.launch {
             _uiState.value = AdminUiState.Loading
             try {
@@ -45,8 +45,11 @@ class AdminViewModel : ViewModel() {
                     title = title,
                     description = description,
                     startAt = date,
-                    venueName = location,
-                    capacity = capacity
+                    venueName = locationName,
+                    venueAddress = locationAddress,
+                    capacity = capacity,
+                    status = "ACTIVE"
+                    // walletClassId = "YOUR_GOOGLE_WALLET_CLASS_ID" // Se añadirá al integrar Wallet
                 )
                 docRef.set(service).await()
                 _uiState.value = AdminUiState.Success("Servicio médico creado con éxito")
